@@ -371,10 +371,20 @@ const PosterCard: React.FC<{
   }
 
   const handleMouseEnter = useCallback(() => {
-    // Mouse hover no longer triggers the trailer preview / quick-view panel.
-    // Keyboard/remote focus (arrow keys) keeps its behavior via onFocus.
     onItemFocus?.();
-  }, [onItemFocus]);
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(() => {
+      // A simple querySelector check to ensure the element is still hovered by the user
+      // when the timeout fires, preventing the video from playing if the user quickly hovers away.
+      if (
+        document.querySelector(
+          `.interactive-card-container[data-movie-id='${movie.id}']:hover`,
+        )
+      ) {
+        setShowVideo(true);
+      }
+    }, 7000); // 7-second delay as requested
+  }, [movie.id]);
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
