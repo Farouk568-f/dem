@@ -8,37 +8,40 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.cinestream.data.api.models.Movie
+import com.cinestream.di.CineStreamViewModelFactory
 import com.cinestream.ui.navigation.Route
 import com.cinestream.ui.viewmodel.SearchViewModel
-import com.cinestream.utils.getBackdropImageUrl
+import com.cinestream.utils.getPosterImageUrl
 
 @Composable
 fun SearchScreen(
-    navController: NavHostController,
-    searchViewModel: SearchViewModel? = null
+    navController: NavHostController
 ) {
-    val searchQuery by remember { mutableStateOf("") }
-    val searchResults by remember { mutableStateOf<List<Movie>>(emptyList()) }
-    val isSearching by remember { mutableStateOf(false) }
-    val searchError by remember { mutableStateOf<String?>(null) }
-    val searchHistory by remember { mutableStateOf(emptyList<String>()) }
-    
+    val context = LocalContext.current
+    val searchViewModel: SearchViewModel = viewModel(factory = CineStreamViewModelFactory(context))
+
+    val searchQuery by searchViewModel.searchQuery.collectAsState()
+    val searchResults by searchViewModel.searchResults.collectAsState()
+    val isSearching by searchViewModel.isSearching.collectAsState()
+    val searchError by searchViewModel.searchError.collectAsState()
+    val searchHistory by searchViewModel.searchHistory.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -54,37 +57,26 @@ fun SearchScreen(
         ) {
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { 
-                    searchViewModel?.updateSearchQuery(it)
-                },
+                onValueChange = { searchViewModel.updateSearchQuery(it) },
                 placeholder = { Text("Search movies & shows...") },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
+                modifier = Modifier.weight(1f),
                 leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = "Search"
-                    )
+                    Icon(Icons.Default.Search, contentDescription = "Search")
                 },
                 trailingIcon = if (searchQuery.isNotEmpty()) {
                     {
-                        IconButton(onClick = { 
-                            searchViewModel?.updateSearchQuery("")
-                        }) {
+                        IconButton(onClick = { searchViewModel.updateSearchQuery("") }) {
                             Icon(Icons.Default.Close, contentDescription = "Clear")
                         }
                     }
                 } else null,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 singleLine = true
             )
         }
-        
+
         // Content
         when {
             searchQuery.isEmpty() -> {
-                // Show search history
                 if (searchHistory.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -100,7 +92,7 @@ fun SearchScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         item {
                             Row(
@@ -114,7 +106,7 @@ fun SearchScreen(
                                     text = "Recent Searches",
                                     style = MaterialTheme.typography.titleMedium
                                 )
-                                TextButton(onClick = { searchViewModel?.clearSearchHistory() }) {
+                                TextButton(onClick = { searchViewModel.clearSearchHistory() }) {
                                     Text("Clear All")
                                 }
                             }
@@ -123,7 +115,7 @@ fun SearchScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { searchViewModel?.updateSearchQuery(query) }
+                                    .clickable { searchViewModel.updateSearchQuery(query) }
                                     .padding(12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -134,15 +126,13 @@ fun SearchScreen(
                                 ) {
                                     Icon(
                                         Icons.Default.History,
-                                        contentDescription = "History",
+                                        contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(query, style = MaterialTheme.typography.bodyMedium)
                                 }
-                                IconButton(onClick = { 
-                                    searchViewModel?.removeFromHistory(query)
-                                }) {
+                                IconButton(onClick = { searchViewModel.removeFromHistory(query) }) {
                                     Icon(
                                         Icons.Default.Delete,
                                         contentDescription = "Delete",
@@ -155,7 +145,7 @@ fun SearchScreen(
                     }
                 }
             }
-            isSearching -> {
+            isSearching && searchResults.isEmpty() -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -175,7 +165,7 @@ fun SearchScreen(
                         text = searchError ?: "Search error",
                         color = MaterialTheme.colorScheme.error
                     )
-                    Button(onClick = { searchViewModel?.clearError() }) {
+                    Button(onClick = { searchViewModel.clearError() }) {
                         Text("Dismiss")
                     }
                 }
@@ -205,11 +195,26 @@ fun SearchScreen(
                         SearchResultCard(
                             movie = movie,
                             onClick = {
-                                navController.navigate(
-                                    Route.Details.createRoute(movie.id, movie.getMediaType().takeIf { it.isNotEmpty() } ?: "movie")
-                                )
+                                val mediaType = movie.getMediaType()
+                                if (mediaType == "movie" || mediaType == "tv") {
+                                    navController.navigate(
+                                        Route.Details.createRoute(movie.id, mediaType)
+                                    )
+                                }
                             }
                         )
+                    }
+                    if (isSearching) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -229,7 +234,7 @@ private fun SearchResultCard(
         shape = MaterialTheme.shapes.medium
     ) {
         AsyncImage(
-            model = movie.backdrop_path.getBackdropImageUrl("w200"),
+            model = movie.poster_path.getPosterImageUrl("w342"),
             contentDescription = movie.getDisplayTitle(),
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop

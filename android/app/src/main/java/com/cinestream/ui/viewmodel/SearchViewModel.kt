@@ -127,13 +127,8 @@ class SearchViewModel(private val movieRepository: MovieRepository) : ViewModel(
     }
     
     fun loadSearchHistory() {
-        // TODO: Load from database when favorites/history DB is set up
-        _searchHistory.value = listOf(
-            "Inception",
-            "The Matrix",
-            "Avatar",
-            "Interstellar"
-        )
+        // History is kept in memory for the session (matches web app behavior per profile)
+        _searchHistory.value = emptyList()
     }
     
     fun clearSearchHistory() {

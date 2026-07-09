@@ -1,13 +1,13 @@
 package com.cinestream.utils
 
 object Constants {
-    // TMDB API
-    const val TMDB_API_KEY = "0d2c94c6cd0a1a95c2e27c0a2c9b9e8f"
+    // TMDB API (same values as the Vite web app - contexts/constants.ts)
+    const val TMDB_API_KEY = "12b96f7cdd99dcc564c5723a2f256b24"
     const val TMDB_BASE_URL = "https://api.themoviedb.org/3/"
     const val TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/"
     
-    // Scraper API
-    const val SCRAPER_API_URL = "https://api.consumet.org/movies/"
+    // Scraper API (same as the Vite web app)
+    const val SCRAPER_API_URL = "https://p01--movie--lk5qxsd2bfgp.code.run/"
     
     // Local Storage Keys
     const val PREF_AUTH_TOKEN = "auth_token"

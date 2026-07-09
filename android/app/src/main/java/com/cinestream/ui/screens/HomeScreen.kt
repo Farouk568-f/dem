@@ -1,6 +1,7 @@
 package com.cinestream.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -13,31 +14,37 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.cinestream.data.api.models.Movie
+import com.cinestream.di.CineStreamViewModelFactory
 import com.cinestream.ui.navigation.Route
 import com.cinestream.ui.viewmodel.HomeViewModel
-import com.cinestream.utils.getBackdropImageUrl
+import com.cinestream.utils.getPosterImageUrl
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    navController: NavHostController,
-    homeViewModel: HomeViewModel? = null
+    navController: NavHostController
 ) {
-    val popularMovies by remember { mutableStateOf(emptyList<Movie>()) }
-    val popularTV by remember { mutableStateOf(emptyList<Movie>()) }
-    val isLoading by remember { mutableStateOf(false) }
-    val error by remember { mutableStateOf<String?>(null) }
-    
+    val context = LocalContext.current
+    val homeViewModel: HomeViewModel = viewModel(factory = CineStreamViewModelFactory(context))
+
+    val popularMovies by homeViewModel.popularMovies.collectAsState()
+    val popularTV by homeViewModel.popularTV.collectAsState()
+    val topRatedMovies by homeViewModel.topRatedMovies.collectAsState()
+    val isLoading by homeViewModel.isLoading.collectAsState()
+    val error by homeViewModel.error.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
     ) {
-        // Top Bar
         TopAppBar(
             title = { Text("CineStream") },
             actions = {
@@ -49,13 +56,13 @@ fun HomeScreen(
                 containerColor = MaterialTheme.colorScheme.surface
             )
         )
-        
+
         when {
             isLoading -> {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
+                        .fillMaxWidth()
+                        .padding(48.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -73,7 +80,7 @@ fun HomeScreen(
                         text = "Error loading content",
                         color = MaterialTheme.colorScheme.error
                     )
-                    Button(onClick = { homeViewModel?.refresh() }) {
+                    Button(onClick = { homeViewModel.refresh() }) {
                         Text("Retry")
                     }
                 }
@@ -83,19 +90,23 @@ fun HomeScreen(
                     title = "Popular Movies",
                     items = popularMovies,
                     onItemClick = { movie ->
-                        navController.navigate(
-                            Route.Player.createRoute(movie.id, "movie")
-                        )
+                        navController.navigate(Route.Details.createRoute(movie.id, "movie"))
                     }
                 )
-                
+
                 ContentSection(
                     title = "Popular TV Shows",
                     items = popularTV,
                     onItemClick = { movie ->
-                        navController.navigate(
-                            Route.Player.createRoute(movie.id, "tv")
-                        )
+                        navController.navigate(Route.Details.createRoute(movie.id, "tv"))
+                    }
+                )
+
+                ContentSection(
+                    title = "Top Rated",
+                    items = topRatedMovies,
+                    onItemClick = { movie ->
+                        navController.navigate(Route.Details.createRoute(movie.id, "movie"))
                     }
                 )
             }
@@ -109,17 +120,18 @@ private fun ContentSection(
     items: List<Movie>,
     onItemClick: (Movie) -> Unit
 ) {
+    if (items.isEmpty()) return
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 16.dp)
+            .padding(vertical = 12.dp)
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
-        
+
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -142,18 +154,16 @@ private fun MovieCard(
 ) {
     Card(
         modifier = Modifier
-            .width(150.dp)
-            .height(225.dp)
-            .clickable { onClick() },
+            .width(130.dp)
+            .height(195.dp)
+            .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium
     ) {
         AsyncImage(
-            model = movie.backdrop_path.getBackdropImageUrl("w300"),
+            model = movie.poster_path.getPosterImageUrl("w342"),
             contentDescription = movie.getDisplayTitle(),
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
     }
 }
-
-private fun clickable(onClick: () -> Unit) = Modifier

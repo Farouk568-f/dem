@@ -40,7 +40,7 @@ class RetrofitClient(private val preferences: SharedPreferences) {
 
     val tmdbApi: CineStreamApiService by lazy {
         Retrofit.Builder()
-            .baseUrl("https://api.themoviedb.org/3/")
+            .baseUrl(com.cinestream.utils.Constants.TMDB_BASE_URL)
             .client(httpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
@@ -49,7 +49,7 @@ class RetrofitClient(private val preferences: SharedPreferences) {
 
     val scraperApi: ScraperApiService by lazy {
         Retrofit.Builder()
-            .baseUrl("https://api.consumet.org/movies/")
+            .baseUrl(com.cinestream.utils.Constants.SCRAPER_API_URL)
             .client(httpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()

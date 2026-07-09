@@ -1,5 +1,6 @@
 package com.cinestream.utils
 
+import com.cinestream.data.api.models.Genre
 import com.cinestream.data.api.models.Movie
 
 fun String?.getPosterImageUrl(width: String = "w500"): String {
