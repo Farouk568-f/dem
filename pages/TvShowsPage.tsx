@@ -12,7 +12,7 @@ const Hero: React.FC = () => {
     const heroImage = "https://blog.xcvgsystems.com/wp-content/uploads/2024/04/fallout_promo.jpg"; // Fallout
     return (
         <div className="relative w-full h-[70vh] min-h-[300px] text-white overflow-hidden rounded-xl">
-            <img src={heroImage} alt="Fallout" className="absolute inset-0 w-full h-full object-cover" />
+            <img src={heroImage} alt="Fallout" className="absolute inset-0 w-full h-full object-cover"  loading="lazy" decoding="async" />
             <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)]/80 via-transparent to-transparent"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-black to-transparent"></div>
             <div className="absolute inset-0 bg-gradient-to-l from-[var(--background)]/50 to-transparent"></div>
@@ -22,7 +22,7 @@ const Hero: React.FC = () => {
                         <span className="text-xl font-black text-red-600" style={{ fontFamily: "'Anton', sans-serif" }}>N</span>
                         <span className="text-sm font-semibold tracking-[0.2em] text-zinc-200 uppercase">SERIES</span>
                     </div>
-                    <img src="https://i.ibb.co/N2z8HGjh/pngimg-com-fallout-PNG34.png" alt="Fallout Title" className="w-full max-w-sm md:max-w-md drop-shadow-lg mb-4" />
+                    <img src="https://i.ibb.co/N2z8HGjh/pngimg-com-fallout-PNG34.png" alt="Fallout Title" className="w-full max-w-sm md:max-w-md drop-shadow-lg mb-4"  loading="lazy" decoding="async" />
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-base text-zinc-200" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.7)' }}>
                         <span>Series</span><span>•</span><span>Sci-Fi</span><span>•</span><span>2024</span><span>•</span><span>1 Season</span><span>•</span><span className="px-2 py-0.5 border border-zinc-400 text-sm rounded">TV-MA</span>
                     </div>
@@ -32,7 +32,7 @@ const Hero: React.FC = () => {
     );
 };
 
-const PosterCard: React.FC<{ movie: Movie; onCardClick: (movie: Movie) => void; isNetflixOriginal?: boolean; index: number }> = ({ movie, onCardClick, isNetflixOriginal, index }) => {
+const PosterCard: React.FC<{ movie: Movie; onCardClick: (movie: Movie) => void; isNetflixOriginal?: boolean; onCardFocus: (element: HTMLElement) => void; index: number }> = ({ movie, onCardClick, isNetflixOriginal, onCardFocus, index }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { isYtApiReady } = useProfile();
@@ -44,35 +44,40 @@ const PosterCard: React.FC<{ movie: Movie; onCardClick: (movie: Movie) => void; 
     const playerRef = useRef<YTPlayer | null>(null);
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const playerContainerId = useMemo(() => `poster-player-${movie.id}-${Math.random().toString(36).substring(2)}`, [movie.id]);
+    const cardRef = useRef<HTMLDivElement>(null);
 
     const handleGlow = useCallback(() => {
-        if (window.cineStreamBgTimeoutId) {
-            clearTimeout(window.cineStreamBgTimeoutId);
-        }
-        window.cineStreamBgTimeoutId = window.setTimeout(() => {
-            if (movie.backdrop_path) {
-                const imageUrl = `${IMAGE_BASE_URL}w300${movie.backdrop_path}`;
-                document.body.style.setProperty('--dynamic-bg-image', `url(${imageUrl})`);
-                document.body.classList.add('has-dynamic-bg');
-            }
-        }, 200);
-    }, [movie.backdrop_path]);
+        // Perf: dead work removed
+    }, []);
 
     const handleMouseEnter = useCallback(() => {
-        // Mouse hover no longer triggers the trailer preview / quick-view panel.
-        // Keyboard/remote focus (arrow keys) keeps its behavior via onFocus.
         handleGlow();
-    }, [handleGlow]);
+        setIsFocused(true);
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = setTimeout(() => {
+          if (
+            document.querySelector(
+              `.interactive-card-container[data-movie-id='${movie.id}']:hover`
+            )
+          ) {
+            setShowVideo(true);
+          }
+        }, 7000);
+    }, [movie.id, handleGlow]);
 
     const handleMouseLeave = useCallback(() => {
         if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
         setShowVideo(false);
+        setIsFocused(false);
     }, []);
 
     const handleFocus = useCallback(() => {
         handleGlow();
         setIsFocused(true);
-    }, [handleGlow]);
+        if (cardRef.current) {
+            onCardFocus(cardRef.current);
+        }
+    }, [handleGlow, onCardFocus]);
 
     const handleBlur = useCallback(() => {
         setIsFocused(false);
@@ -121,6 +126,7 @@ const PosterCard: React.FC<{ movie: Movie; onCardClick: (movie: Movie) => void; 
 
     return (
         <div 
+            ref={cardRef}
             className="interactive-card-container relative flex-shrink-0 w-[24vw] min-w-[220px] max-w-[320px] cursor-pointer glow-card-container focusable rounded-lg mb-8" 
             onMouseEnter={handleMouseEnter} 
             onMouseLeave={handleMouseLeave} 
@@ -132,9 +138,9 @@ const PosterCard: React.FC<{ movie: Movie; onCardClick: (movie: Movie) => void; 
             tabIndex={0}
             style={{ '--glow-image-url': `url(${imageUrl})` } as React.CSSProperties}
         >
-            <div className="relative transition-all duration-300 ease-in-out transform rounded-lg shadow-lg interactive-card">
+            <div className="relative transition-all duration-300 ease-in-out transform rounded-lg shadow-lg overflow-hidden interactive-card">
                 {isNetflixOriginal && ( <span style={{ fontFamily: "'Anton', sans-serif", textShadow: '1px 1px 3px rgba(0,0,0,0.5)' }} className="absolute top-2 left-2 z-10 text-3xl font-black text-[var(--primary)] pointer-events-none">V</span> )}
-                <div className="relative w-full aspect-video bg-black rounded-t-lg overflow-hidden" onClick={() => onCardClick(movie)}>
+                <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden" onClick={() => onCardClick(movie)}>
                     <img src={`${IMAGE_BASE_URL}${BACKDROP_SIZE_MEDIUM}${movie.backdrop_path}`} alt={movie.title || movie.name} className={`object-cover w-full h-full absolute inset-0 transition-opacity duration-700 ${showVideo ? 'opacity-0' : 'opacity-100'}`} loading="lazy"
             decoding="async" />
                     <div className={`absolute inset-0 w-full h-full transition-opacity duration-700 ${showVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
@@ -142,19 +148,18 @@ const PosterCard: React.FC<{ movie: Movie; onCardClick: (movie: Movie) => void; 
                           <div className="absolute inset-0" />
                           {showVideo && ( <div className="absolute bottom-2 right-2 z-10"><button onClick={toggleMute} className="w-8 h-8 border-2 border-white/50 rounded-full text-white/80 hover:border-white hover:text-white transition-colors text-sm flex items-center justify-center bg-black/50"><i className={`fa-solid ${isMuted ? 'fa-volume-xmark' : 'fa-volume-high'}`}></i></button></div> )}
                     </div>
-                </div>
-                <div className="quick-view bg-[var(--surface)] px-3 rounded-b-lg">
-                   <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => navigate('/player', { state: { item: movie, type } })} className="w-9 h-9 flex items-center justify-center text-black bg-white rounded-full text-lg btn-press"><i className="fas fa-play"></i></button>
-                        <button className="w-9 h-9 flex items-center justify-center text-white border-2 border-zinc-500 rounded-full text-lg btn-press hover:border-white"><i className="fas fa-plus"></i></button>
-                      </div>
-                      <button onClick={() => onCardClick(movie)} className="w-9 h-9 flex items-center justify-center text-white border-2 border-zinc-500 rounded-full text-lg btn-press hover:border-white"><i className="fas fa-chevron-down"></i></button>
-                   </div>
-                   <div className="flex items-center flex-wrap gap-2 text-xs mt-3 text-zinc-300 pb-2">
-                      <span className="font-bold text-green-500">{(movie.vote_average * 10).toFixed(0)}% {t('match')}</span>
-                      <span className='px-1.5 py-0.5 border border-white/40 text-[10px] rounded'>HD</span>
-                   </div>
+                    <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 pointer-events-none">
+                         <div className={`transform transition-all duration-300 ease-out ${isFocused ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-4 opacity-0 scale-95'}`}>
+                             <span className="px-2 py-0.5 text-[11px] font-bold text-white bg-green-600 rounded-sm shadow-md">
+                                 {(movie.vote_average * 10).toFixed(0)}% {t('match')}
+                             </span>
+                         </div>
+                         <div className={`transform transition-all duration-300 ease-out delay-75 ${isFocused ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-4 opacity-0 scale-95'}`}>
+                             <span className="px-2 py-0.5 text-[11px] font-bold text-white bg-black/60 backdrop-blur-sm rounded-sm shadow-md border border-white/20">
+                                 {movie.release_date?.substring(0, 4) || movie.first_air_date?.substring(0, 4)}
+                             </span>
+                         </div>
+                    </div>
                 </div>
             </div>
             <div
@@ -170,17 +175,107 @@ const PosterCard: React.FC<{ movie: Movie; onCardClick: (movie: Movie) => void; 
 
 const ContentRow: React.FC<{ title: string; movies: Movie[]; onCardClick: (movie: Movie) => void; zIndex?: number }> = ({ title, movies, onCardClick, zIndex }) => {
     if (!movies || movies.length === 0) return null;
+    const [isRowActive, setIsRowActive] = useState(false);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const rowContentRef = useRef<HTMLDivElement>(null);
+    const rowRef = useRef<HTMLDivElement>(null);
+    const [isInView, setIsInView] = useState(false);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsInView(true);
+                    observer.unobserve(entry.target);
+                }
+            },
+            {
+                root: null,
+                rootMargin: "0px",
+                threshold: 0.1,
+            }
+        );
+
+        const currentRef = rowRef.current;
+        if (currentRef) {
+            observer.observe(currentRef);
+        }
+
+        return () => {
+            if (currentRef) {
+                observer.unobserve(currentRef);
+            }
+        };
+    }, []);
+
+    const handleCardFocus = useCallback((cardElement: HTMLElement) => {
+        if (!scrollContainerRef.current || !rowContentRef.current) return;
+
+        const containerWidth = scrollContainerRef.current.clientWidth;
+        const contentWidth = rowContentRef.current.scrollWidth;
+        const padding = 24;
+
+        let targetScroll = cardElement.offsetLeft - padding;
+
+        const maxScroll = contentWidth - containerWidth;
+        if (targetScroll > maxScroll) {
+            targetScroll = maxScroll;
+        }
+
+        if (targetScroll < 0) {
+            targetScroll = 0;
+        }
+
+        if (rowContentRef.current) {
+            rowContentRef.current.style.transform = `translateX(${-targetScroll}px)`;
+        }
+    }, []);
+
     const handleMouseLeaveList = useCallback(() => {
         if (window.cineStreamBgTimeoutId) {
             clearTimeout(window.cineStreamBgTimeoutId);
             window.cineStreamBgTimeoutId = null;
         }
-        document.body.classList.remove('has-dynamic-bg');
     }, []);
+
     return (
-        <div className="my-6 md:my-8" style={{ zIndex }} onMouseLeave={handleMouseLeaveList}>
-            <h2 className="text-lg md:text-xl font-bold text-white mb-3 px-4 md:px-10">{title}</h2>
-            <div className="overflow-x-auto no-scrollbar py-32 -my-32"><div className="flex flex-nowrap gap-x-6 px-6 md:px-10">{movies.map((movie, index) => <PosterCard key={movie.id} movie={movie} onCardClick={onCardClick} index={index} />)}</div></div>
+        <div 
+            ref={rowRef}
+            className={`my-6 md:my-8 content-row ${isInView ? "is-in-view" : ""}`} 
+            style={{ zIndex }} 
+            onMouseLeave={handleMouseLeaveList}
+            onFocus={() => setIsRowActive(true)}
+            onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setIsRowActive(false);
+                }
+            }}
+        >
+            <div className="flex items-baseline justify-between mb-3 px-6">
+                <h2 className={`text-lg md:text-xl font-bold text-white transition-all duration-300 ease-out origin-left ${isRowActive ? "scale-100" : "scale-90 text-zinc-400"}`}>
+                    {title}
+                </h2>
+            </div>
+            <div ref={scrollContainerRef} className="overflow-x-hidden no-scrollbar py-32 -my-32">
+                <div 
+                    ref={rowContentRef} 
+                    className="flex flex-nowrap gap-x-6 px-6"
+                    style={{
+                        transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                        willChange: "transform",
+                    }}
+                >
+                    {movies.map((movie, index) => (
+                        <PosterCard 
+                            key={movie.id} 
+                            movie={movie} 
+                            onCardClick={onCardClick} 
+                            onCardFocus={handleCardFocus}
+                            index={index} 
+                        />
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };
@@ -265,47 +360,128 @@ const FilterBar: React.FC<{
 };
 
 const FilteredItemCard: React.FC<{ item: Movie; index: number }> = ({ item, index }) => {
-    const { setModalItem } = useProfile();
+    const navigate = useNavigate();
+    const { t } = useTranslation();
+    const { isYtApiReady, setModalItem } = useProfile();
+    const type = 'tv';
+
+    const [showVideo, setShowVideo] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
     const [isFocused, setIsFocused] = useState(false);
-    if (!item.backdrop_path) return null;
-    
-    const glowImageUrl = `${IMAGE_BASE_URL}w500${item.backdrop_path}`;
-    
-    const handleGlow = useCallback(() => {
-        if (window.cineStreamBgTimeoutId) {
-            clearTimeout(window.cineStreamBgTimeoutId);
-        }
-        window.cineStreamBgTimeoutId = window.setTimeout(() => {
-            if (item.backdrop_path) {
-                const imageUrl = `${IMAGE_BASE_URL}w300${item.backdrop_path}`;
-                document.body.style.setProperty('--dynamic-bg-image', `url(${imageUrl})`);
-                document.body.classList.add('has-dynamic-bg');
+    const playerRef = useRef<YTPlayer | null>(null);
+    const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const playerContainerId = useMemo(() => `filtered-player-${item.id}-${Math.random().toString(36).substring(2)}`, [item.id]);
+
+    const handleGlow = useCallback(() => {}, []);
+
+    const handleMouseEnter = useCallback(() => {
+        handleGlow();
+        setIsFocused(true);
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = setTimeout(() => {
+          if (
+            document.querySelector(
+              `.interactive-card-container[data-movie-id='${item.id}']:hover`
+            )
+          ) {
+            setShowVideo(true);
+          }
+        }, 7000);
+    }, [item.id, handleGlow]);
+
+    const handleMouseLeave = useCallback(() => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        setShowVideo(false);
+        setIsFocused(false);
+    }, []);
+
+    const handleFocus = useCallback(() => {
+        handleGlow();
+        setIsFocused(true);
+    }, [handleGlow]);
+
+    const handleBlur = useCallback(() => {
+        setIsFocused(false);
+    }, []);
+
+    useEffect(() => {
+        if (!showVideo || !isYtApiReady) {
+            if (playerRef.current) {
+                playerRef.current.destroy();
+                playerRef.current = null;
             }
-        }, 200);
-    }, [item.backdrop_path]);
+            return;
+        }
+
+        const initPlayer = (videoId: string) => {
+          if (document.getElementById(playerContainerId) && !playerRef.current) {
+            playerRef.current = new window.YT.Player(playerContainerId, {
+              videoId: videoId,
+              playerVars: { autoplay: 1, controls: 0, rel: 0, loop: 1, playlist: videoId, playsinline: 1, modestbranding: 1, iv_load_policy: 3, fs: 0, start: 5 },
+              events: { onReady: (event) => { playerRef.current = event.target; event.target.mute(); setIsMuted(true); event.target.playVideo(); } }
+            });
+          }
+        };
+
+        const fetchTrailerAndInit = async () => {
+          try {
+            const videos = await fetchFromTMDB(`/${type}/${item.id}/videos`);
+            const trailer = videos.results.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube');
+            initPlayer(trailer ? trailer.key : 'mF428AFx9gY');
+          } catch { initPlayer('mF428AFx9gY'); }
+        };
+
+        fetchTrailerAndInit();
+        return () => { if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; } };
+    }, [showVideo, item.id, type, playerContainerId, isYtApiReady]);
+
+    const toggleMute = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        const player = playerRef.current;
+        if (!player?.isMuted) return;
+        if (player.isMuted()) { player.unMute(); setIsMuted(false); } else { player.mute(); setIsMuted(true); }
+    }, []);
+  
+    if (!item.backdrop_path) return null;
+    const imageUrl = `${IMAGE_BASE_URL}w500${item.backdrop_path}`;
 
     return (
         <div 
-            className="w-full animate-grid-item cursor-pointer glow-card-container focusable relative rounded-lg" 
-            style={{ '--glow-image-url': `url(${glowImageUrl})`, animationDelay: `${index * 30}ms` } as React.CSSProperties}
+            className="interactive-card-container relative w-full cursor-pointer glow-card-container focusable rounded-lg mb-8" 
+            onMouseEnter={handleMouseEnter} 
+            onMouseLeave={handleMouseLeave} 
+            data-movie-id={item.id}
             onClick={() => setModalItem({ ...item, media_type: 'tv' })}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             onKeyDown={(e) => e.key === 'Enter' && setModalItem({ ...item, media_type: 'tv' })}
-            onMouseEnter={handleGlow}
-            onFocus={() => { handleGlow(); setIsFocused(true); }}
-            onBlur={() => setIsFocused(false)}
             tabIndex={0}
+            style={{ '--glow-image-url': `url(${imageUrl})`, animationDelay: `${index * 30}ms` } as React.CSSProperties}
         >
-            <div className="relative transition-all duration-300 ease-in-out rounded-lg shadow-lg interactive-card hover:scale-105">
-                 <img
-                    src={`${IMAGE_BASE_URL}${BACKDROP_SIZE_MEDIUM}${item.backdrop_path}`}
-                    alt={item.title || item.name}
-                    className="object-cover w-full aspect-video rounded-lg"
-                    loading="lazy"
-            decoding="async"
-                />
+            <div className="relative transition-all duration-300 ease-in-out transform rounded-lg shadow-lg overflow-hidden interactive-card">
+                <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden" onClick={() => setModalItem({ ...item, media_type: 'tv' })}>
+                    <img src={`${IMAGE_BASE_URL}${BACKDROP_SIZE_MEDIUM}${item.backdrop_path}`} alt={item.title || item.name} className={`object-cover w-full h-full absolute inset-0 transition-opacity duration-700 ${showVideo ? 'opacity-0' : 'opacity-100'}`} loading="lazy" decoding="async" />
+                    <div className={`absolute inset-0 w-full h-full transition-opacity duration-700 ${showVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                          <div id={playerContainerId} className="w-full h-full pointer-events-none" />
+                          <div className="absolute inset-0" />
+                          {showVideo && ( <div className="absolute bottom-2 right-2 z-10"><button onClick={toggleMute} className="w-8 h-8 border-2 border-white/50 rounded-full text-white/80 hover:border-white hover:text-white transition-colors text-sm flex items-center justify-center bg-black/50"><i className={`fa-solid ${isMuted ? 'fa-volume-xmark' : 'fa-volume-high'}`}></i></button></div> )}
+                    </div>
+                    <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 pointer-events-none">
+                         <div className={`transform transition-all duration-300 ease-out ${isFocused ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-4 opacity-0 scale-95'}`}>
+                             <span className="px-2 py-0.5 text-[11px] font-bold text-white bg-green-600 rounded-sm shadow-md">
+                                 {(item.vote_average * 10).toFixed(0)}% {t('match')}
+                             </span>
+                         </div>
+                         <div className={`transform transition-all duration-300 ease-out delay-75 ${isFocused ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-4 opacity-0 scale-95'}`}>
+                             <span className="px-2 py-0.5 text-[11px] font-bold text-white bg-black/60 backdrop-blur-sm rounded-sm shadow-md border border-white/20">
+                                 {item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4)}
+                             </span>
+                         </div>
+                    </div>
+                </div>
             </div>
-            <div className="mt-2 text-left min-h-[1.5rem]">
-                <p className={`text-xs font-semibold text-white truncate transition-all duration-200 ${isFocused ? "opacity-100" : "opacity-0"}`}>
+            <div className={`absolute -bottom-7 left-2 right-2 text-left transition-all duration-300 ease-in-out z-20 ${isFocused ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                <p className="text-xs font-semibold text-white truncate drop-shadow-lg">
                     {item.title || item.name}
                 </p>
             </div>
@@ -403,7 +579,6 @@ const TvShowsPage: React.FC = () => {
             clearTimeout(window.cineStreamBgTimeoutId);
             window.cineStreamBgTimeoutId = null;
         }
-        document.body.classList.remove('has-dynamic-bg');
     }, []);
 
     const handleOpenModal = (item: Movie) => setModalItem(item);
@@ -479,7 +654,7 @@ const TvShowsPage: React.FC = () => {
                     {hasMore && (
                         <button 
                             onClick={handleLoadMore} 
-                            className="text-white hover:text-white/80 transition-all font-semibold py-8 px-12 bg-transparent border-none outline-none focusable focus:text-red-500 rounded-md cursor-pointer mt-4 animate-fade-in"
+                            className="px-6 py-3 bg-zinc-900 border border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 transition-all font-bold text-sm rounded-full cursor-pointer mt-6 focusable"
                         >
                             {t('loadMore')}
                         </button>

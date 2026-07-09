@@ -24,17 +24,10 @@ const FilmographyListItem: React.FC<{ item: Movie, index: number }> = ({ item, i
   };
 
   const handleGlow = useCallback(() => {
-    if (window.cineStreamBgTimeoutId) {
-        clearTimeout(window.cineStreamBgTimeoutId);
-    }
-    window.cineStreamBgTimeoutId = window.setTimeout(() => {
-        if (item.backdrop_path) {
-            const imageUrl = `${IMAGE_BASE_URL}w300${item.backdrop_path}`;
-            document.body.style.setProperty('--dynamic-bg-image', `url(${imageUrl})`);
-            document.body.classList.add('has-dynamic-bg');
-        }
-    }, 200);
-  }, [item.backdrop_path]);
+        // Perf: dead work removed — this used to write an unused
+        // --dynamic-bg-image variable onto <body> (no CSS ever read it),
+        // forcing a full-page style recalculation on every card focus/hover.
+    }, []);
 
   if (!item.backdrop_path) return null;
 
@@ -115,7 +108,6 @@ const ActorDetailsPage: React.FC = () => {
             clearTimeout(window.cineStreamBgTimeoutId);
             window.cineStreamBgTimeoutId = null;
         }
-        document.body.classList.remove('has-dynamic-bg');
     }, []);
 
     if (loading || !actor) {
@@ -208,7 +200,7 @@ const ActorDetailsPage: React.FC = () => {
                                 <h2 className="text-lg font-bold text-white mb-3">{t('forYou')}</h2>
                                 <div onClick={() => navigate(`/details/${featuredContent.media_type}/${featuredContent.id}`)} className="cursor-pointer group">
                                     <div className="relative aspect-video rounded-xl overflow-hidden shadow-lg interactive-card">
-                                        <img src={`${IMAGE_BASE_URL}${BACKDROP_SIZE}${featuredContent.backdrop_path}`} alt={featuredContent.title || featuredContent.name} className="w-full h-full object-cover" />
+                                        <img src={`${IMAGE_BASE_URL}${BACKDROP_SIZE}${featuredContent.backdrop_path}`} alt={featuredContent.title || featuredContent.name} className="w-full h-full object-cover"  loading="lazy" decoding="async" />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
                                         <div className="absolute bottom-0 left-0 p-4">
                                             <h3 className="text-xl font-bold text-white">{featuredContent.title || featuredContent.name}</h3>
@@ -274,7 +266,7 @@ const ActorDetailsPage: React.FC = () => {
             <Layout>
                 <div className="absolute top-0 left-0 right-0 h-40 md:h-52">
                      {bannerImage && (
-                        <img src={`${IMAGE_BASE_URL}${BACKDROP_SIZE}${bannerImage}`} className="w-full h-full object-cover" alt="banner" />
+                        <img src={`${IMAGE_BASE_URL}${BACKDROP_SIZE}${bannerImage}`} className="w-full h-full object-cover" alt="banner"  loading="lazy" decoding="async" />
                      )}
                      <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/80 to-transparent"></div>
                 </div>
@@ -288,7 +280,7 @@ const ActorDetailsPage: React.FC = () => {
                                         src={`${IMAGE_BASE_URL}${POSTER_SIZE}${actor.profile_path}`}
                                         alt={actor.name}
                                         className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-full flex-shrink-0 border-4 border-[var(--background)] shadow-lg"
-                                    />
+                                     loading="lazy" decoding="async" />
                                 </div>
                             )}
                             <div className="flex-1 pt-2">

@@ -20,17 +20,10 @@ const ItemCard: React.FC<{ item: Movie | FavoriteItem, index: number }> = ({ ite
     if (!backdropPath) return null;
 
     const handleGlow = useCallback(() => {
-        if (window.cineStreamBgTimeoutId) {
-            clearTimeout(window.cineStreamBgTimeoutId);
-        }
-        window.cineStreamBgTimeoutId = window.setTimeout(() => {
-            if (backdropPath) {
-                const imageUrl = `${IMAGE_BASE_URL}w300${backdropPath}`;
-                document.body.style.setProperty('--dynamic-bg-image', `url(${imageUrl})`);
-                document.body.classList.add('has-dynamic-bg');
-            }
-        }, 200);
-    }, [backdropPath]);
+        // Perf: dead work removed — this used to write an unused
+        // --dynamic-bg-image variable onto <body> (no CSS ever read it),
+        // forcing a full-page style recalculation on every card focus/hover.
+    }, []);
 
     const handleItemClick = () => {
         const itemForModal: Movie = {
@@ -114,17 +107,10 @@ const GenericPage: React.FC<{
         };
 
         const handleGlow = useCallback(() => {
-            if (window.cineStreamBgTimeoutId) {
-                clearTimeout(window.cineStreamBgTimeoutId);
-            }
-            window.cineStreamBgTimeoutId = window.setTimeout(() => {
-                if (item.backdrop_path) {
-                    const imageUrl = `${IMAGE_BASE_URL}w300${item.backdrop_path}`;
-                    document.body.style.setProperty('--dynamic-bg-image', `url(${imageUrl})`);
-                    document.body.classList.add('has-dynamic-bg');
-                }
-            }, 200);
-        }, [item.backdrop_path]);
+        // Perf: dead work removed — this used to write an unused
+        // --dynamic-bg-image variable onto <body> (no CSS ever read it),
+        // forcing a full-page style recalculation on every card focus/hover.
+    }, []);
 
         const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
             if (e.key === 'Enter') {
@@ -335,7 +321,6 @@ const GenericPage: React.FC<{
             clearTimeout(window.cineStreamBgTimeoutId);
             window.cineStreamBgTimeoutId = null;
         }
-        document.body.classList.remove('has-dynamic-bg');
     }, []);
 
     if (pageType === 'search') {
@@ -429,7 +414,7 @@ const GenericPage: React.FC<{
                     if(pageType === 'downloads') {
                          return (
                             <div key={item.title} className="flex flex-col items-center animate-grid-item" style={{ animationDelay: `${index * 30}ms` }}>
-                                <img src={item.poster} alt={item.title} className="w-full rounded-lg" />
+                                <img src={item.poster} alt={item.title} className="w-full rounded-lg"  loading="lazy" decoding="async" />
                                 <p className="mt-2 text-sm text-center">{item.title}</p>
                             </div>
                          );

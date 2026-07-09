@@ -117,6 +117,10 @@ export interface SubtitleTrack {
   language: string;
   url: string;
   display: string;
+  filename?: string;
+  release?: string;
+  downloads?: number;
+  rating?: number;
 }
 
 // FIX: Add ChatMessage interface for LiveRoomPage chat functionality.
@@ -147,6 +151,7 @@ export interface SubtitleSettings {
   edgeStyle: 'none' | 'drop-shadow' | 'outline';
   verticalPosition: number;
   timingOffset?: number;
+  autoTimingCorrection?: boolean;
 }
 
 export interface VideoFilters {
