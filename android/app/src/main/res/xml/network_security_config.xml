@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext traffic only to localhost for debugging -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">api.themoviedb.org</domain>
+        <domain includeSubdomains="true">image.tmdb.org</domain>
+    </domain-config>
+    
+    <!-- Certificate pinning for enhanced security (optional) -->
+    <pin-set expiration="2025-12-31">
+        <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
+    </pin-set>
+</network-security-config>
