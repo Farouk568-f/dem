@@ -45,3 +45,11 @@
 
 # Your app classes
 -keep class com.cinestream.** { *; }
+
+# Coil
+-keep class coil.** { *; }
+-dontwarn coil.**
+
+# ZXing
+-keep class com.google.zxing.** { *; }
+-dontwarn com.google.zxing.**
